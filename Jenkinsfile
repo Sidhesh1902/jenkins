@@ -1,39 +1,47 @@
 pipeline {
-  agent {
-    docker {
-      image 'node:18-alpine'
-    }
+  agent any
+
+  environment {
+    IMAGE_NAME = 'sidhesh2005/hello-ci'
   }
 
   stages {
-    stage('Install Dependencies') {
+    stage('Checkout') {
       steps {
-        sh 'npm install'
+        checkout scm
       }
     }
 
-    stage('Run Build') {
+    stage('Build Docker Image') {
       steps {
-        echo '🏗️ Building the Node.js app...'
-        sh 'node --version'
-        sh 'npm run build || echo "No build script found"'
+        script {
+          echo '🐳 Building Docker image...'
+          sh "docker build -t ${IMAGE_NAME}:latest ."
+        }
       }
     }
 
-    stage('Test') {
+    stage('Push to Docker Hub') {
       steps {
-        echo '🧪 Running tests...'
-        sh 'npm test || echo "No tests configured"'
+        script {
+          echo '📦 Pushing image to Docker Hub...'
+          withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+            sh '''
+              echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+              docker push ${IMAGE_NAME}:latest
+            '''
+          }
+        }
       }
     }
   }
 
   post {
     success {
-      echo '✅ Build completed successfully inside Node container!'
+      echo '✅ CI/CD Pipeline successful — image pushed to Docker Hub!'
     }
     failure {
-      echo '❌ Build failed — check logs for details.'
+      echo '❌ Pipeline failed — check logs.'
     }
   }
 }
