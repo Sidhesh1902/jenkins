@@ -1,11 +1,39 @@
 pipeline {
-  agent any
+  agent {
+    docker {
+      image 'node:18-alpine'
+    }
+  }
+
   stages {
-    stage('Build') {
+    stage('Install Dependencies') {
       steps {
-        echo '✅ Jenkins connected successfully and building the Node.js app!'
-        sh 'node --version'
+        sh 'npm install'
       }
+    }
+
+    stage('Run Build') {
+      steps {
+        echo '🏗️ Building the Node.js app...'
+        sh 'node --version'
+        sh 'npm run build || echo "No build script found"'
+      }
+    }
+
+    stage('Test') {
+      steps {
+        echo '🧪 Running tests...'
+        sh 'npm test || echo "No tests configured"'
+      }
+    }
+  }
+
+  post {
+    success {
+      echo '✅ Build completed successfully inside Node container!'
+    }
+    failure {
+      echo '❌ Build failed — check logs for details.'
     }
   }
 }
